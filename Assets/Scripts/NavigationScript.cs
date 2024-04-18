@@ -80,10 +80,8 @@ public class NavigationScript : MonoBehaviour
     {
         if (linearVelocityText)
             linearVelocityText.text = "Linear Velocity: " + agent.velocity.ToString("F2");
-        
         if (angularSpeedText)
             angularSpeedText.text = "Angular Speed: " + agent.angularSpeed.ToString("F2");
-        
         if (directionToNextWaypointText && agent.hasPath)
         {
             Vector3 direction = (agent.steeringTarget - transform.position).normalized;
