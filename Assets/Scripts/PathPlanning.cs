@@ -13,7 +13,6 @@ public class PathPlanning : MonoBehaviour
 
     private void Start()
     {
-        transform.rotation = transform.parent.rotation;
         Application.targetFrameRate = 20;
         path = new NavMeshPath();
         StartCoroutine(FollowPath());
@@ -45,11 +44,11 @@ public class PathPlanning : MonoBehaviour
         Vector3 directionToTarget = (end - start).normalized;
         float targetAngleDegrees = Mathf.Atan2(directionToTarget.x, directionToTarget.z) * Mathf.Rad2Deg;
         Quaternion targetRotation = Quaternion.Euler(0, targetAngleDegrees, 0);
-        float difference = (transform.parent.rotation * Quaternion.Inverse(targetRotation)).eulerAngles.y;
+        float difference = (transform.rotation * Quaternion.Inverse(targetRotation)).eulerAngles.y;
         Debug.Log(difference);
-        while (Quaternion.Angle(transform.parent.rotation, targetRotation) > threshold)
+        while (Quaternion.Angle(transform.rotation, targetRotation) > threshold)
         {
-            transform.parent.rotation = Quaternion.RotateTowards(transform.parent.rotation, targetRotation, ang_vel * Mathf.Rad2Deg * Time.deltaTime);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, ang_vel * Mathf.Rad2Deg * Time.deltaTime);
             /* SEND TO DOG */
             if (difference > 180)
                 dog_interface.SendAngularVelocity(-ang_vel);
@@ -59,7 +58,7 @@ public class PathPlanning : MonoBehaviour
             yield return null;
         }
         dog_interface.SendAngularVelocity(0);
-        transform.parent.rotation = targetRotation;
+        transform.rotation = targetRotation;
     }
 
     private IEnumerator MoveTowards(Vector3 start, Vector3 end)
