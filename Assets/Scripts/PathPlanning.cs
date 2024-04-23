@@ -5,13 +5,16 @@ using System.Collections;
 public class PathPlanning : MonoBehaviour
 {
     [SerializeField]
+    private DogInterface dog_interface;
     private NavMeshPath path;
-    private const float ang_vel = 1f; 
-    private const float lin_vel = 1f; 
+    private const float ang_vel = .2f; 
+    private const float lin_vel = .2f; 
     private const float threshold = 0.1f; 
 
     private void Start()
     {
+        transform.rotation = transform.parent.rotation;
+        Application.targetFrameRate = 20;
         path = new NavMeshPath();
         StartCoroutine(FollowPath());
         StartCoroutine(VisualizePath());
@@ -42,13 +45,21 @@ public class PathPlanning : MonoBehaviour
         Vector3 directionToTarget = (end - start).normalized;
         float targetAngleDegrees = Mathf.Atan2(directionToTarget.x, directionToTarget.z) * Mathf.Rad2Deg;
         Quaternion targetRotation = Quaternion.Euler(0, targetAngleDegrees, 0);
-        while (Quaternion.Angle(transform.rotation, targetRotation) > threshold)
+        float difference = (transform.parent.rotation * Quaternion.Inverse(targetRotation)).eulerAngles.y;
+        Debug.Log(difference);
+        while (Quaternion.Angle(transform.parent.rotation, targetRotation) > threshold)
         {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, ang_vel * Mathf.Rad2Deg * Time.deltaTime);
-            // TODO 
+            transform.parent.rotation = Quaternion.RotateTowards(transform.parent.rotation, targetRotation, ang_vel * Mathf.Rad2Deg * Time.deltaTime);
+            /* SEND TO DOG */
+            if (difference > 180)
+                dog_interface.SendAngularVelocity(-ang_vel);
+            else
+                dog_interface.SendAngularVelocity(ang_vel);
+            /* SEND TO DOG */
             yield return null;
         }
-        transform.rotation = targetRotation;
+        dog_interface.SendAngularVelocity(0);
+        transform.parent.rotation = targetRotation;
     }
 
     private IEnumerator MoveTowards(Vector3 start, Vector3 end)
@@ -57,9 +68,12 @@ public class PathPlanning : MonoBehaviour
         while (Vector3.Distance(transform.position, end) > threshold)
         {
             transform.position = Vector3.MoveTowards(transform.position, end, lin_vel * Time.deltaTime);
-            // TODO 
+            /* SEND TO DOG */
+            dog_interface.SendLinearVelocity(lin_vel);
+            /* SEND TO DOG */
             yield return null;
         }
+        dog_interface.SendLinearVelocity(0);
         transform.position = end;
     }
 
