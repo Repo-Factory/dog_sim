@@ -7,8 +7,8 @@ public class PathPlanning : MonoBehaviour
     [SerializeField]
     private DogInterface dog_interface;
     private NavMeshPath path;
-    private const float ang_vel = .2f; 
-    private const float lin_vel = .2f; 
+    private const float ang_vel = 2f; 
+    private const float lin_vel = 2f; 
     private const float threshold = 0.1f; 
 
     private void Start()
@@ -45,7 +45,6 @@ public class PathPlanning : MonoBehaviour
         float targetAngleDegrees = Mathf.Atan2(directionToTarget.x, directionToTarget.z) * Mathf.Rad2Deg;
         Quaternion targetRotation = Quaternion.Euler(0, targetAngleDegrees, 0);
         float difference = (transform.rotation * Quaternion.Inverse(targetRotation)).eulerAngles.y;
-        Debug.Log(difference);
         while (Quaternion.Angle(transform.rotation, targetRotation) > threshold)
         {
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, ang_vel * Mathf.Rad2Deg * Time.deltaTime);
