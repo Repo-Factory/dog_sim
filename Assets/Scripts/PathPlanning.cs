@@ -5,7 +5,7 @@ using System.Collections;
 public class PathPlanning : MonoBehaviour
 {
     [SerializeField]
-    private DogInterface dog_interface;
+    // private DogInterface dog_interface;
     private NavMeshPath path;
     private const float ang_vel = 2f; 
     private const float lin_vel = 2f; 
@@ -25,9 +25,13 @@ public class PathPlanning : MonoBehaviour
         foreach (GameObject target in targets)
         {
             NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
-            for (int i = 0; i < path.corners.Length - 1; i++)
+            while (path.corners.Length > 1)
             {
-                yield return StartCoroutine(GoToNextPoint(path.corners[i], path.corners[i+1]));
+                NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
+                if (path.corners.Length > 1)
+                {
+                    yield return StartCoroutine(GoToNextPoint(path.corners[0], path.corners[1]));
+                }
             }
             yield return new WaitForSeconds(3f); 
         }
@@ -49,14 +53,14 @@ public class PathPlanning : MonoBehaviour
         {
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, ang_vel * Mathf.Rad2Deg * Time.deltaTime);
             /* SEND TO DOG */
-            if (difference > 180)
-                dog_interface.SendAngularVelocity(-ang_vel);
-            else
-                dog_interface.SendAngularVelocity(ang_vel);
+            // if (difference > 180)
+                // dog_interface.SendAngularVelocity(-ang_vel);
+            // else
+                // dog_interface.SendAngularVelocity(ang_vel);
             /* SEND TO DOG */
             yield return null;
         }
-        dog_interface.SendAngularVelocity(0);
+        // dog_interface.SendAngularVelocity(0);
         transform.rotation = targetRotation;
     }
 
@@ -67,11 +71,11 @@ public class PathPlanning : MonoBehaviour
         {
             transform.position = Vector3.MoveTowards(transform.position, end, lin_vel * Time.deltaTime);
             /* SEND TO DOG */
-            dog_interface.SendLinearVelocity(lin_vel);
+            // dog_interface.SendLinearVelocity(lin_vel);
             /* SEND TO DOG */
             yield return null;
         }
-        dog_interface.SendLinearVelocity(0);
+        // dog_interface.SendLinearVelocity(0);
         transform.position = end;
     }
 
