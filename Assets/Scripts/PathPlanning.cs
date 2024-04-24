@@ -5,7 +5,8 @@ using System.Collections;
 public class PathPlanning : MonoBehaviour
 {
     [SerializeField]
-    // private DogInterface dog_interface;
+    public Transform pivotPoint;
+    public DogInterface dog_interface;
     private NavMeshPath path;
     private const float ang_vel = 2f; 
     private const float lin_vel = 2f; 
@@ -30,38 +31,44 @@ public class PathPlanning : MonoBehaviour
                 NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
                 if (path.corners.Length > 1)
                 {
-                    yield return StartCoroutine(GoToNextPoint(path.corners[0], path.corners[1]));
+                    yield return StartCoroutine(GoToNextPoint(path.corners[0], path.corners[1], target));
                 }
             }
             yield return new WaitForSeconds(3f); 
         }
     }
 
-    private IEnumerator GoToNextPoint(Vector3 start, Vector3 end)
+    private IEnumerator GoToNextPoint(Vector3 start, Vector3 end, GameObject target)
     {
         yield return StartCoroutine(RotateTowards(start, end));
+        NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
+        yield return StartCoroutine(RotateTowards(transform.position, end));
         yield return StartCoroutine(MoveTowards  (start, end));
     }
 
     private IEnumerator RotateTowards(Vector3 start, Vector3 end)
     {
         Vector3 directionToTarget = (end - start).normalized;
-        float targetAngleDegrees = Mathf.Atan2(directionToTarget.x, directionToTarget.z) * Mathf.Rad2Deg;
-        Quaternion targetRotation = Quaternion.Euler(0, targetAngleDegrees, 0);
-        float difference = (transform.rotation * Quaternion.Inverse(targetRotation)).eulerAngles.y;
-        while (Quaternion.Angle(transform.rotation, targetRotation) > threshold)
+        float targetAngleDegrees =  Mathf.Atan2(directionToTarget.x, directionToTarget.z) * Mathf.Rad2Deg;
+        float currentAngleDegrees = Mathf.Atan2(transform.forward.x, transform.forward.z) * Mathf.Rad2Deg;
+        
+        while (Mathf.Abs(Mathf.DeltaAngle(currentAngleDegrees, targetAngleDegrees)) > threshold)
         {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, ang_vel * Mathf.Rad2Deg * Time.deltaTime);
+            float step = ang_vel * Mathf.Rad2Deg * Time.deltaTime;
+            float angleDifference = Mathf.DeltaAngle(currentAngleDegrees, targetAngleDegrees);
+            float angleToRotate = Mathf.Sign(angleDifference) * Mathf.Min(Mathf.Abs(angleDifference), step);
+            transform.RotateAround(pivotPoint.position, Vector3.up, angleToRotate);
+            currentAngleDegrees += angleToRotate;
             /* SEND TO DOG */
-            // if (difference > 180)
-                // dog_interface.SendAngularVelocity(-ang_vel);
-            // else
-                // dog_interface.SendAngularVelocity(ang_vel);
+            if (angleDifference < 0){
+                dog_interface.SendAngularVelocity(-ang_vel);}
+            else{
+                dog_interface.SendAngularVelocity(ang_vel);}
             /* SEND TO DOG */
             yield return null;
         }
-        // dog_interface.SendAngularVelocity(0);
-        transform.rotation = targetRotation;
+        dog_interface.SendAngularVelocity(0);
+        transform.eulerAngles = new Vector3(transform.eulerAngles.x, targetAngleDegrees, transform.eulerAngles.z);
     }
 
     private IEnumerator MoveTowards(Vector3 start, Vector3 end)
@@ -71,11 +78,11 @@ public class PathPlanning : MonoBehaviour
         {
             transform.position = Vector3.MoveTowards(transform.position, end, lin_vel * Time.deltaTime);
             /* SEND TO DOG */
-            // dog_interface.SendLinearVelocity(lin_vel);
+            dog_interface.SendLinearVelocity(lin_vel);
             /* SEND TO DOG */
             yield return null;
         }
-        // dog_interface.SendLinearVelocity(0);
+        dog_interface.SendLinearVelocity(0);
         transform.position = end;
     }
 

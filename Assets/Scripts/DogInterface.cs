@@ -28,7 +28,7 @@ public class DogInterface : MonoBehaviour
             Byte[] byte_data = BitConverter.GetBytes(message);
             NetworkStream stream = lin_client.GetStream();
             stream.Write(byte_data, 0, byte_data.Length);
-            Debug.Log("VectorStream sent: " + message);
+            Debug.Log("Moving with speed: " + message);
         }
         catch (Exception e)
         {
@@ -43,7 +43,7 @@ public class DogInterface : MonoBehaviour
             Byte[] byte_data = BitConverter.GetBytes(message);
             NetworkStream stream = ang_client.GetStream();
             stream.Write(byte_data, 0, byte_data.Length);
-            Debug.Log("VectorStream sent: " + message);
+            Debug.Log("Turning with speed: " + message);
         }
         catch (Exception e)
         {
