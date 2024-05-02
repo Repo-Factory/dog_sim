@@ -8,9 +8,10 @@ public class PathPlanning : MonoBehaviour
     public Transform pivotPoint;
     public DogInterface dog_interface;
     private NavMeshPath path;
-    private const float ang_vel = 2f; 
-    private const float lin_vel = 2f; 
-    private const float threshold = 0.1f; 
+    private const float ang_vel = 1f; 
+    private const float lin_vel = 1f; 
+    private const float threshold = 0.1f;
+    private bool person_found = false;
 
     private void Start()
     {
@@ -20,21 +21,67 @@ public class PathPlanning : MonoBehaviour
         StartCoroutine(VisualizePath());
     }
 
+    private IEnumerator SearchState()
+    {
+        Debug.Log("Entering Search State");
+        float targetAngleDegrees = 720;
+        float currentAngleDegrees = 0;
+
+        while (currentAngleDegrees < targetAngleDegrees)
+        {
+            float step = ang_vel * Mathf.Rad2Deg * Time.deltaTime; 
+            transform.RotateAround(pivotPoint.position, Vector3.up, step); 
+            currentAngleDegrees += step; 
+            /* SEND TO DOG */
+            if (dog_interface.DetectPerson())
+            {
+                person_found = true; 
+                dog_interface.SendAngularVelocity(0); 
+                yield break; 
+            }
+            dog_interface.SendAngularVelocity(-ang_vel);
+            /* SEND TO DOG */
+            yield return null; 
+        }
+        dog_interface.SendAngularVelocity(0); 
+    }
+
     private IEnumerator FollowPath()
     {
         GameObject[] targets = GameObject.FindGameObjectsWithTag("NavTarget");
+
         foreach (GameObject target in targets)
         {
+            yield return StartCoroutine(FollowToTarget(target));
+            yield return StartCoroutine(SearchAndHandleTarget(target));
+        }
+
+        Application.Quit();
+    }
+
+    private IEnumerator FollowToTarget(GameObject target)
+    {
+        NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
+        while (path.corners.Length > 1)
+        {
             NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
-            while (path.corners.Length > 1)
+
+            if (path.corners.Length > 1)
             {
-                NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
-                if (path.corners.Length > 1)
-                {
-                    yield return StartCoroutine(GoToNextPoint(path.corners[0], path.corners[1], target));
-                }
+                yield return StartCoroutine(GoToNextPoint(path.corners[0], path.corners[1], target));
             }
-            yield return new WaitForSeconds(3f); 
+        }
+    }
+
+    private IEnumerator SearchAndHandleTarget(GameObject target)
+    {
+        person_found = false;
+        yield return StartCoroutine(SearchState());
+
+        if (person_found)
+        {
+            Debug.Log("Starting Activity Recognition");
+            yield return new WaitForSeconds(30f); // Start Activity Recognition for 30s
         }
     }
 
@@ -60,15 +107,14 @@ public class PathPlanning : MonoBehaviour
             transform.RotateAround(pivotPoint.position, Vector3.up, angleToRotate);
             currentAngleDegrees += angleToRotate;
             /* SEND TO DOG */
-            if (angleDifference < 0){
-                dog_interface.SendAngularVelocity(-ang_vel);}
-            else{
-                dog_interface.SendAngularVelocity(ang_vel);}
+            if (angleDifference > 0)
+                dog_interface.SendAngularVelocity(-ang_vel);
+            else
+                dog_interface.SendAngularVelocity(ang_vel);
             /* SEND TO DOG */
             yield return null;
         }
-        dog_interface.SendAngularVelocity(0);
-        transform.eulerAngles = new Vector3(transform.eulerAngles.x, targetAngleDegrees, transform.eulerAngles.z);
+        dog_interface.SendAngularVelocity(0);        
     }
 
     private IEnumerator MoveTowards(Vector3 start, Vector3 end)
