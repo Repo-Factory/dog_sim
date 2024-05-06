@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using System;
 
 public class PathPlanning : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class PathPlanning : MonoBehaviour
     private const float lin_vel = 1f; 
     private const float threshold = 0.1f;
     private bool person_found = false;
+    private bool only_sim = true;
 
     private void Start()
     {
@@ -23,7 +25,7 @@ public class PathPlanning : MonoBehaviour
 
     private IEnumerator SearchState()
     {
-        Debug.Log("Entering Search State");
+        dog_interface.Speak("Entering Search State");
         float targetAngleDegrees = 720;
         float currentAngleDegrees = 0;
 
@@ -32,15 +34,23 @@ public class PathPlanning : MonoBehaviour
             float step = ang_vel * Mathf.Rad2Deg * Time.deltaTime; 
             transform.RotateAround(pivotPoint.position, Vector3.up, step); 
             currentAngleDegrees += step; 
-            /* SEND TO DOG */
-            if (dog_interface.DetectPerson())
+            SendToDog(() => 
             {
-                person_found = true; 
-                dog_interface.SendAngularVelocity(0); 
-                yield break; 
+                if (dog_interface.DetectPerson())
+                {
+                    person_found = true; 
+                    dog_interface.Speak("Human Detected");
+                    dog_interface.SendAngularVelocity(0); 
+                }
+                else
+                {
+                    dog_interface.SendAngularVelocity(-ang_vel);
+                }
+            });
+            if (person_found) 
+            {
+                yield break;
             }
-            dog_interface.SendAngularVelocity(-ang_vel);
-            /* SEND TO DOG */
             yield return null; 
         }
         dog_interface.SendAngularVelocity(0); 
@@ -61,6 +71,7 @@ public class PathPlanning : MonoBehaviour
 
     private IEnumerator FollowToTarget(GameObject target)
     {
+        dog_interface.Speak("Going To Next Target");
         NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
         while (path.corners.Length > 1)
         {
@@ -77,10 +88,12 @@ public class PathPlanning : MonoBehaviour
     {
         person_found = false;
         yield return StartCoroutine(SearchState());
-
         if (person_found)
         {
-            Debug.Log("Starting Activity Recognition");
+            SendToDog(() => 
+            {
+                dog_interface.Speak("Starting Activity Recognition");
+            });
             yield return new WaitForSeconds(30f); // Start Activity Recognition for 30s
         }
     }
@@ -106,12 +119,13 @@ public class PathPlanning : MonoBehaviour
             float angleToRotate = Mathf.Sign(angleDifference) * Mathf.Min(Mathf.Abs(angleDifference), step);
             transform.RotateAround(pivotPoint.position, Vector3.up, angleToRotate);
             currentAngleDegrees += angleToRotate;
-            /* SEND TO DOG */
-            if (angleDifference > 0)
-                dog_interface.SendAngularVelocity(-ang_vel);
-            else
-                dog_interface.SendAngularVelocity(ang_vel);
-            /* SEND TO DOG */
+            SendToDog(() => 
+            {
+                if (angleDifference > 0)
+                    dog_interface.SendAngularVelocity(-ang_vel);
+                else
+                    dog_interface.SendAngularVelocity(ang_vel);
+            });
             yield return null;
         }
         dog_interface.SendAngularVelocity(0);        
@@ -123,9 +137,10 @@ public class PathPlanning : MonoBehaviour
         while (Vector3.Distance(transform.position, end) > threshold)
         {
             transform.position = Vector3.MoveTowards(transform.position, end, lin_vel * Time.deltaTime);
-            /* SEND TO DOG */
-            dog_interface.SendLinearVelocity(lin_vel);
-            /* SEND TO DOG */
+            SendToDog(() => 
+            {
+                dog_interface.SendLinearVelocity(lin_vel);
+            });
             yield return null;
         }
         dog_interface.SendLinearVelocity(0);
@@ -142,5 +157,11 @@ public class PathPlanning : MonoBehaviour
             }
             yield return new WaitForSeconds(0.1f);
         }
+    }
+
+    private void SendToDog(Action dogAction)
+    {
+        if (!only_sim)
+            dogAction?.Invoke();
     }
 }

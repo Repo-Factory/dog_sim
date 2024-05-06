@@ -10,19 +10,22 @@ using System.IO;
 
 public class DogInterface : MonoBehaviour
 {  
+    private const string network = "localhost";
     private const int lin_port = 7000;
     private const int ang_port = 7001;
     private const int vis_port = 7002;
-    private const string network = "localhost";
+    private const int spk_port = 7003;
     private TcpClient lin_client;
     private TcpClient ang_client;
     private TcpClient vis_client;
+    private TcpClient spk_client;
 
     void Start()
     {
         lin_client = new TcpClient(network, lin_port);
         ang_client = new TcpClient(network, ang_port);
         vis_client = new TcpClient(network, vis_port);
+        spk_client = new TcpClient(network, spk_port);
     }
 
     public void SendLinearVelocity(in float message)
@@ -69,6 +72,22 @@ public class DogInterface : MonoBehaviour
             NetworkStream stream = ang_client.GetStream();
             stream.Write(byte_data, 0, byte_data.Length);
             Debug.Log("Turning with speed: " + message);
+        }
+        catch (Exception e)
+        {
+            Debug.Log("Error sending message: " + e);
+        }
+    }
+
+    public void Speak(in string message)
+    {
+        try
+        {            
+            byte[] byte_data = Encoding.UTF8.GetBytes(message);
+            NetworkStream stream = spk_client.GetStream();
+            stream.Write(byte_data, 0, byte_data.Length);
+            stream.Flush();
+            Debug.Log("Sent Message to Be Spoken: " + message);
         }
         catch (Exception e)
         {
