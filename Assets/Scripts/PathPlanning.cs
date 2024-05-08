@@ -9,11 +9,11 @@ public class PathPlanning : MonoBehaviour
     public Transform pivotPoint;
     public DogInterface dog_interface;
     private NavMeshPath path;
-    private const float ang_vel = 1f; 
-    private const float lin_vel = 1f; 
+    private const float ang_vel = .2f; 
+    private const float lin_vel = .2f; 
     private const float threshold = 0.1f;
     private bool person_found = false;
-    private bool only_sim = true;
+    private bool only_sim = false;
 
     private void Start()
     {
