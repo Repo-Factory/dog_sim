@@ -1,3 +1,9 @@
+/* 
+ * Bridge script between Unity and Python code. Four different services are provided, meaning Unity can ask python to trigger a 
+ * forward movement, an angular movement, a person detection query, or a speech request. It does this by sending the appropriate 
+ * message to the port corresponding to each service
+ */
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

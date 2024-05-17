@@ -1,3 +1,8 @@
+/* 
+ * Path planning script will calculate a series of points to reach a target. As Unity provides commands for the simulation to move, it will provided the same commands
+ * to the bridge script to move the dog in real life. 
+ */
+
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
@@ -6,23 +11,26 @@ using System;
 public class PathPlanning : MonoBehaviour
 {
     [SerializeField]
-    public Transform pivotPoint;
-    public DogInterface dog_interface;
+    public Transform pivotPoint; // This is necessary because the dog doesn't turn around it's center in real life, it drifts a bit
+    public DogInterface dog_interface; // Bridge to Python Code outside of Unity
     private NavMeshPath path;
+    // We will spin and move forward at constant velocity, dog is "at" the goal when difference is less than threshold
     private const float ang_vel = .2f; 
     private const float lin_vel = .2f; 
     private const float threshold = 0.1f;
-    private bool person_found = false;
-    private bool only_sim = false;
+    /// //////////////////////////////////////////////////
+    private bool person_found = false; // For object detection
+    private bool only_sim = false; // Toggle this if you want to test/view the simulation without making the actual dog move
 
     private void Start()
     {
-        Application.targetFrameRate = 20;
+        Application.targetFrameRate = 20; // We need the script to be slow so it doesn't overload the real dog with commands
         path = new NavMeshPath();
         StartCoroutine(FollowPath());
         StartCoroutine(VisualizePath());
     }
 
+    // Look for human, when found, stop the dog, otherwise keep going until we make two circles
     private IEnumerator SearchState()
     {
         dog_interface.Speak("Entering Search State");
@@ -56,6 +64,7 @@ public class PathPlanning : MonoBehaviour
         dog_interface.SendAngularVelocity(0); 
     }
 
+    // We'll move to each object in Unity marked NavTarget
     private IEnumerator FollowPath()
     {
         GameObject[] targets = GameObject.FindGameObjectsWithTag("NavTarget");
@@ -73,6 +82,7 @@ public class PathPlanning : MonoBehaviour
     {
         dog_interface.Speak("Going To Next Target");
         NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
+        // We'll keep going as long as there are more points in the path
         while (path.corners.Length > 1)
         {
             NavMesh.CalculatePath(transform.position, target.transform.position, NavMesh.AllAreas, path);
@@ -147,6 +157,7 @@ public class PathPlanning : MonoBehaviour
         transform.position = end;
     }
 
+    // This simply draws the path in Unity so we know what's going on
     private IEnumerator VisualizePath()
     {
         while (true)
@@ -159,6 +170,7 @@ public class PathPlanning : MonoBehaviour
         }
     }
 
+    // This will cleanly wrap all code that goes to the outside world so we can disable with one boolean
     private void SendToDog(Action dogAction)
     {
         if (!only_sim)
